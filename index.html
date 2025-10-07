@@ -117,6 +117,7 @@ function Program() {
 	this.soundSystem = new SoundSystem();
 	this.simulation = new Simulation(this.soundSystem);
 	this.control = new Control(this.simulation);
+	this.simulation.targetControl = this.control;
 	this.display = new Display(this.simulation, this.control);
 	this.control.targetDisplay = this.display;
 	
@@ -140,6 +141,8 @@ function Control(inSimulation) {
 	this.createButtons();
 	
 	this.mouse = new Mouse();
+
+	this.key = {};
 	
 	let t = this;
 	
@@ -148,6 +151,7 @@ function Control(inSimulation) {
 	window.addEventListener("mouseleave", function(e){t.handleMouseLeave(e)});
 	
 	window.addEventListener("keydown", function(e){t.handleKeyDown(e)});
+	window.addEventListener("keyup", function(e){t.handleKeyUp(e)});
 }
 function Mouse() {
 	this.x = -100;
@@ -228,7 +232,10 @@ Control.prototype.handleMouseLeave = function(event) {
 Control.prototype.handleKeyDown = function(event) {
 	let sim = this.targetSimulation;
 	let code = event.code;
+
+	this.key[code] = true;
 	
+	/*
 	switch (code) {
 		case "KeyA":
 			sim.movePlayer(-1,0);
@@ -242,12 +249,16 @@ Control.prototype.handleKeyDown = function(event) {
 		case "KeyS":
 			sim.movePlayer(0,1);
 			break;
-		/*case 37: // left arrow
+		case 37: // left arrow
 			this.targetSimulation.movePlayer(-1,0);
 			event.preventDefault();
-			break; */
-	}
+			break; 
+	} */
+}
+Control.prototype.handleKeyUp = function(event) {
+	let code = event.code;
 
+	this.key[code] = false;
 }
 
 Control.prototype.begin = function(value) {
@@ -263,6 +274,7 @@ Control.prototype.begin = function(value) {
 // ---------- Simulation Module --------------------------------------------- //
 function Simulation(inSoundSystem) {
 	this.targetSoundSystem = inSoundSystem;
+	this.targetControl;
 	
 	this.reset();
 }
@@ -270,6 +282,7 @@ Simulation.prototype.reset = function() {
 	this.timer = 0;
 	this.endTime = 0;
 	this.isRunning = false;
+	this.inputDelay = 0;
 	this.flags = new Flags();
 	
 	this.random = new PseudorandomGenerator();
@@ -429,7 +442,9 @@ function Player(inX, inY) {
 	
 	this.oldX = inX;
 	this.oldY = inY;
+
 	this.animationDelay = 0;
+	this.maxAnimationDelay = 15;
 	
 	this.stepAnimation = 0;
 	this.facing = directionID.down;
@@ -493,6 +508,7 @@ function Item(inType, inQuantity) {
 
 Simulation.prototype.movePlayer = function(dx, dy) {
 	let p = this.player;
+	
 	
 	let playedSound = false;
 	
@@ -568,7 +584,7 @@ Simulation.prototype.movePlayer = function(dx, dy) {
 			p.y = newY;
 			this.exploreTiles();
 			
-			p.animationDelay = 10;
+			p.animationDelay = p.maxAnimationDelay;
 			
 			
 			
@@ -613,7 +629,7 @@ Simulation.prototype.movePlayer = function(dx, dy) {
 			p.y = newY;
 			this.exploreTiles();
 			
-			p.animationDelay = 10;
+			p.animationDelay = p.maxAnimationDelay;
 			
 			this.checkObjectCollisions();
 			
@@ -837,6 +853,7 @@ Simulation.prototype.handleSound = function(note, duration) {
 }
 
 Simulation.prototype.update = function() {
+	
 	if (this.isRunning == true) {
 		this.timer++;
 		let p = this.player;
@@ -848,6 +865,32 @@ Simulation.prototype.update = function() {
 		p.stepAnimation++;
 		
 		this.updateObjects();
+	}
+
+	this.handleInput(); // should this be after or before general updating
+}
+Simulation.prototype.handleInput = function() {
+	let ctrl = this.targetControl;
+
+	if (this.inputDelay>0) {
+		this.inputDelay--;
+	} else {
+		if (ctrl.key["KeyW"]) {
+			this.movePlayer(0,-1);
+			this.inputDelay = 15;
+		}
+		if (ctrl.key["KeyA"]) {
+			this.movePlayer(-1,0);
+			this.inputDelay = 15;
+		}
+		if (ctrl.key["KeyS"]) {
+			this.movePlayer(0,1);
+			this.inputDelay = 15;
+		}
+		if (ctrl.key["KeyD"]) {
+			this.movePlayer(1,0);
+			this.inputDelay = 15;
+		}
 	}
 }
 Simulation.prototype.updateObjects = function() {
@@ -935,9 +978,9 @@ Display.prototype.drawTerrain = function() {
 	let p = sim.player;
 	
 	let dx = p.x - p.oldX;
-	let cameraX = dx*(p.animationDelay)/10;
+	let cameraX = dx*(p.animationDelay)/p.maxAnimationDelay;
 	let dy = p.y - p.oldY;
-	let cameraY = dy*(p.animationDelay)/10;
+	let cameraY = dy*(p.animationDelay)/p.maxAnimationDelay;
 	
 	for (let i=0; i<sim.width; i++) {
 		for (let j=0; j<sim.height; j++) {
@@ -1048,9 +1091,9 @@ Display.prototype.drawObjects = function() {
 	let p = sim.player;
 	
 	let dx = p.x - p.oldX;
-	let cameraX = dx*(p.animationDelay)/10;
+	let cameraX = dx*(p.animationDelay)/p.maxAnimationDelay;
 	let dy = p.y - p.oldY;
-	let cameraY = dy*(p.animationDelay)/10;
+	let cameraY = dy*(p.animationDelay)/p.maxAnimationDelay;
 	
 	for (let i=0; i<sim.object.length; i++) {
 		let o = sim.object[i];
