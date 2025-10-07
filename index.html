@@ -259,6 +259,9 @@ Control.prototype.handleKeyUp = function(event) {
 	let code = event.code;
 
 	this.key[code] = false;
+
+	let sim = this.targetSimulation;
+	sim.isBlockedByDialog = false;
 }
 
 Control.prototype.begin = function(value) {
@@ -282,7 +285,10 @@ Simulation.prototype.reset = function() {
 	this.timer = 0;
 	this.endTime = 0;
 	this.isRunning = false;
+	
 	this.inputDelay = 0;
+	this.isBlockedByDialog = false;
+
 	this.flags = new Flags();
 	
 	this.random = new PseudorandomGenerator();
@@ -840,6 +846,8 @@ Simulation.prototype.setDialog = function(index, speaker) {
 	this.gameState = gameStateID.inDialog;
 	this.currentDialog = index;
 	this.currentSpeaker = speaker;
+
+	this.isBlockedByDialog = true;
 }
 
 Simulation.prototype.handleSound = function(note, duration) {
@@ -874,20 +882,17 @@ Simulation.prototype.handleInput = function() {
 
 	if (this.inputDelay>0) {
 		this.inputDelay--;
-	} else {
+	} else if (this.isBlockedByDialog == false) {
 		if (ctrl.key["KeyW"]) {
 			this.movePlayer(0,-1);
 			this.inputDelay = 15;
-		}
-		if (ctrl.key["KeyA"]) {
+		} else if (ctrl.key["KeyA"]) {
 			this.movePlayer(-1,0);
 			this.inputDelay = 15;
-		}
-		if (ctrl.key["KeyS"]) {
+		} else if (ctrl.key["KeyS"]) {
 			this.movePlayer(0,1);
 			this.inputDelay = 15;
-		}
-		if (ctrl.key["KeyD"]) {
+		} else if (ctrl.key["KeyD"]) {
 			this.movePlayer(1,0);
 			this.inputDelay = 15;
 		}
