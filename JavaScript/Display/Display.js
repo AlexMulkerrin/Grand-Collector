@@ -40,11 +40,11 @@ function Display(inSimulation, inControl) {
 	
 	let t = this;
 	this.tileset = new Image();
-	this.tileset.src = "Tileset.png";
+	this.tileset.src = "Resources/Images/Tileset.png";
 	this.tileset.onload = function(){t.tileset.isReady=true};
 	
 	this.sprites = new Image();
-	this.sprites.src = "Sprites.png";
+	this.sprites.src = "Resources/Images/Sprites.png";
 	this.sprites.onload = function(){t.sprites.isReady=true};
 }
 Display.prototype.refresh = function() {
